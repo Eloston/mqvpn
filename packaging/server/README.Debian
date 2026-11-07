@@ -106,11 +106,12 @@ enabled and running, a later reinstall starts it again.
 
 "apt purge mqvpn-server" also deletes the files that mqvpn-server-setup
 created: server.conf, which contains the PSK, and the self-signed certificate
-and key. It deletes them also if you edited them. Each client then needs a
-new key. Purge never deletes a file that mqvpn-server-setup did not create,
-for example a server.conf that you wrote before the install, and never a
-symlink, for example a certbot link that replaced the self-signed
-certificate. It deletes /etc/mqvpn only when the directory is empty.
+and key. It deletes server.conf also if you edited it. Each client then needs
+a new key. Purge never deletes a file that mqvpn-server-setup did not create,
+for example a server.conf that you wrote before the install. It also keeps a
+symlink at one of these paths, for example a certbot link that replaced the
+self-signed certificate, and a certificate or key that you copied over the
+generated one. It deletes /etc/mqvpn only when the directory is empty.
 
 Autostart and containers
 ------------------------

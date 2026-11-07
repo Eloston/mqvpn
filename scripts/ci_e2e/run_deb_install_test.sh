@@ -225,6 +225,20 @@ check "13b: the key symlink stays" test -L "$KEY"
 check "13b: the generated server.conf is gone" test ! -e "$CONF"
 rm -f "$CRT" "$KEY"
 
+# ── 13c: purge keeps a regular file that replaced a generated certificate ───
+
+phase "13c: a certificate and key copied over the generated ones survive purge"
+apt_run MQVPN_PORT=10443 install "$SRV" || fail "apt-get install mqvpn-server"
+make_admin_cert copied.ci.example
+cp "$CERT_DIR/cert.pem" "$CRT"
+cp "$CERT_DIR/key.pem" "$KEY"
+apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
+check "13c: the copied certificate stays" cmp -s "$CERT_DIR/cert.pem" "$CRT"
+check "13c: the copied key stays" cmp -s "$CERT_DIR/key.pem" "$KEY"
+check "13c: purge reported the kept key" log_has "mqvpn-server: kept $KEY (not the generated file)"
+check "13c: the generated server.conf is gone" test ! -e "$CONF"
+rm -f "$CRT" "$KEY"
+
 # ── 6: MQVPN_SERVER_AUTOSTART=no ─────────────────────────────────────────────
 
 phase "6: install with MQVPN_SERVER_AUTOSTART=no"

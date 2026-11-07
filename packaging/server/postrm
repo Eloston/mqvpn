@@ -25,12 +25,17 @@ purge)
     fi
     # Delete only the paths that mqvpn-server-setup created (D7, the openssh-server pattern).
     # A symlink at such a path is the admin's replacement (certbot), so it stays.
+    # A path with a hash (the certificate and key) is deleted only if the file is still the generated one.
+    hashes=$STATE_DIR/generated.sha256
     if [ -f "$STATE_DIR/generated.list" ]; then
         while IFS= read -r path; do
             case "$path" in
             /etc/mqvpn/*)
                 if [ -L "$path" ]; then
                     echo "mqvpn-server: kept $path (a symlink, not the generated file)"
+                elif [ -e "$path" ] && [ -f "$hashes" ] && cut -d' ' -f3- "$hashes" | grep -qxF "$path" \
+                    && ! grep -qxF "$(sha256sum < "$path" | cut -d' ' -f1)  $path" "$hashes"; then
+                    echo "mqvpn-server: kept $path (not the generated file)"
                 elif [ -e "$path" ]; then
                     rm -f "$path"
                     echo "mqvpn-server: deleted $path"

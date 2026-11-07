@@ -580,7 +580,16 @@ sudo cmake --install build --prefix /usr/local
 
 ### サーバー
 
-`mqvpn-server` deb または install.sh でインストールした場合は `/etc/mqvpn/server.conf` が自動生成されています。手動で設定する場合はサンプルをコピーします：
+`mqvpn-server` deb または install.sh でインストールした場合は `/etc/mqvpn/server.conf` が自動生成されており、クライアントが使う認証キーが含まれています。サンプルで置き換えずにこのファイルを編集し、変更を反映するためにサーバーを再起動します：
+
+```bash
+sudo vi /etc/mqvpn/server.conf
+sudo systemctl restart mqvpn-server
+```
+
+`mqvpn-server` deb のセットアップが失敗した場合、`server.conf` は作成されず、サーバーも起動しません。インストール時に表示されたエラーを修正してから、`sudo /usr/lib/mqvpn/mqvpn-server-setup --start` を実行してください。
+
+`server.conf` がない場合（ソースからビルドした場合など）は、サンプルをコピーします：
 
 ```bash
 sudo cp /etc/mqvpn/server.conf.example /etc/mqvpn/server.conf
