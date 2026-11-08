@@ -196,7 +196,7 @@ check "7: server.conf stays" test -f "$CONF"
 check "7: postrm printed the purge note" log_has "mqvpn-server: removed. A purge deletes the generated server.conf"
 check "19.4: remove keeps $DEFAULTS" test -f "$DEFAULTS"
 apt_run install "$SRV" || fail "apt-get install after remove"
-check "7: a reinstall starts the server that remove stopped" wait_active
+check "7: a reinstall leaves the stopped server stopped" is_inactive
 check "7: the reinstall keeps the PSK" test "$(auth_key)" = "$PSK"
 
 # ── 8, 13, 19.4: purge deletes the generated files only ──────────────────────
