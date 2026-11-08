@@ -322,7 +322,7 @@ apt_run install "$SRV" || fail "apt-get install over an admin configuration"
 check "14: the install did not change server.conf" test "$(sha256sum "$CONF")" = "$ADMIN_SUM"
 check "14: setup generated no file" test ! -s /var/lib/mqvpn-server/generated.list
 apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
-check "14: server.conf survives purge" test -f "$CONF"
+check "14: server.conf survives purge unchanged" test "$(sha256sum "$CONF")" = "$ADMIN_SUM"
 check "14: the certificate symlink survives purge" test -L "$CRT"
 check "14: the key symlink survives purge" test -L "$KEY"
 rm -f "$CONF" "$CRT" "$KEY"

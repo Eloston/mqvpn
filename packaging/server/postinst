@@ -39,7 +39,7 @@ if [ "$1" = configure ]; then
     [ -e /etc/mqvpn/server.conf ] && had_conf=1
     if ! "$SETUP" --from-postinst; then
         setup_ok=0
-        echo "mqvpn-server: setup failed; the service is not started. Fix the error, then run dpkg-reconfigure mqvpn-server. To start the server after that, run systemctl enable --now mqvpn-server" >&2
+        echo "mqvpn-server: setup failed; the service is not started. Fix the error, then run dpkg-reconfigure mqvpn-server. If it reports no error, run systemctl enable --now mqvpn-server" >&2
     fi
     if [ "$had_conf" = 1 ] && [ "${DEBCONF_RECONFIGURE:-0}" = 1 ]; then
         echo "mqvpn-server: /etc/mqvpn/server.conf exists and was not changed. To apply the new answers, delete /etc/mqvpn/server.conf (this also deletes the auth key) and run dpkg-reconfigure mqvpn-server again."
