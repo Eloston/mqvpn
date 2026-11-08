@@ -23,7 +23,7 @@ if [ "$1" = configure ]; then
         echo "mqvpn-server: warning: /usr/local/bin/mqvpn from install.sh comes before /usr/bin/mqvpn in PATH. Delete the install.sh files: rm -rf /usr/local/bin/mqvpn /usr/local/lib/libmqvpn.so* /usr/local/lib/libxquic.so /usr/local/lib/mqvpn /usr/local/share/doc/mqvpn && ldconfig. Do not run 'install.sh --uninstall' now: it also deletes the unit files of this package." >&2
     fi
 
-    # MQVPN_DEBCONF_* and not MQVPN_*: debconf ranks below /etc/default and the environment (D5).
+    # MQVPN_DEBCONF_* and not MQVPN_*: debconf ranks below the environment (D5).
     db_get mqvpn-server/subnet;         MQVPN_DEBCONF_SUBNET=$RET
     db_get mqvpn-server/port;           MQVPN_DEBCONF_PORT=$RET
     db_get mqvpn-server/autostart;      MQVPN_DEBCONF_SERVER_AUTOSTART=$RET

@@ -17,7 +17,6 @@ CONF_DIR=/etc/mqvpn
 CONF=$CONF_DIR/server.conf
 CRT=$CONF_DIR/server.crt
 KEY=$CONF_DIR/server.key
-DEFAULTS_FILE=/etc/default/mqvpn-server
 STATE_DIR=/var/lib/mqvpn-server
 GENERATED_LIST=$STATE_DIR/generated.list
 GENERATED_HASHES=$STATE_DIR/generated.sha256
@@ -42,10 +41,10 @@ is_true() {
     esac
 }
 
-# --- Settings (precedence, lowest first: defaults, debconf, $DEFAULTS_FILE, environment, flags) ---
+# --- Settings (precedence, lowest first: defaults, debconf, environment, flags) ---
 SETTINGS=(MQVPN_PORT MQVPN_SUBNET MQVPN_SUBNET6 MQVPN_SERVER_AUTOSTART)
 
-# Save the environment values first: sourcing $DEFAULTS_FILE overwrites them.
+# Save the environment values first: the defaults below overwrite them.
 declare -A env_values=()
 for name in "${SETTINGS[@]}"; do
     if [ -n "${!name+x}" ]; then
@@ -83,10 +82,6 @@ for name in "${SETTINGS[@]}"; do
         printf -v "$name" '%s' "${!debconf_name}"
     fi
 done
-if [ -r "$DEFAULTS_FILE" ]; then
-    # shellcheck source=/dev/null
-    . "$DEFAULTS_FILE"
-fi
 for name in "${!env_values[@]}"; do
     printf -v "$name" '%s' "${env_values[$name]}"
 done

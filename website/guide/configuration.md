@@ -596,7 +596,7 @@ sudo cmake --install build --prefix /usr/local
 
 ### Server
 
-If the `mqvpn-server` deb reported that setup failed, it created no `server.conf` and did not start the server. Fix the error that the install showed, then run `sudo dpkg-reconfigure mqvpn-server`. It uses the answers from the install, such as the port, but it does not keep settings that you gave as environment variables: put those in `/etc/default/mqvpn-server` first. If it reports no error, run `sudo systemctl enable --now mqvpn-server`, or `sudo systemctl start mqvpn-server` if the server must not start at boot.
+If the `mqvpn-server` deb reported that setup failed, it created no `server.conf` and did not start the server. Fix the error that the install showed, then run `sudo dpkg-reconfigure mqvpn-server`. It uses the answers from the install, such as the port, but it does not keep settings that you gave as environment variables: give them again, for example `sudo env MQVPN_SUBNET=10.8.0.0/24 dpkg-reconfigure mqvpn-server`. If it reports no error, run `sudo systemctl enable --now mqvpn-server`, or `sudo systemctl start mqvpn-server` if the server must not start at boot.
 
 If you installed the `mqvpn-server` deb or used install.sh, `/etc/mqvpn/server.conf` is already generated and contains the auth key that your clients use. Do not replace it with the example: edit it, then restart the server so that the changes take effect:
 

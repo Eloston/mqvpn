@@ -26,7 +26,6 @@ VERSION=$(dpkg-deb -f "$RT" Version)
 CONF=/etc/mqvpn/server.conf
 CRT=/etc/mqvpn/server.crt
 KEY=/etc/mqvpn/server.key
-DEFAULTS=/etc/default/mqvpn-server
 UNIT=mqvpn-server.service
 WORK=$(mktemp -d)
 LOG=$WORK/apt.log
@@ -159,17 +158,13 @@ for pair in "mqvpn mqvpn-server" "mqvpn mqvpn-dev" "mqvpn-server mqvpn-dev"; do
     check "9: $a and $b share no file" test -z "$shared"
 done
 
-# ── 5, 19.2: reinstall keeps the PSK, the certificate and a conffile edit ─────
+# ── 5: reinstall keeps the PSK and the certificate ──────────────────────────
 
-phase "5, 19.2: apt-get install --reinstall mqvpn-server"
+phase "5: apt-get install --reinstall mqvpn-server"
 FP=$(cert_fp)
-sed -i 's/^#MQVPN_SUBNET6=$/MQVPN_SUBNET6=/' "$DEFAULTS"
-check "19.2: the edit is in $DEFAULTS" grep -qx 'MQVPN_SUBNET6=' "$DEFAULTS"
-apt_run install --reinstall "$SRV" || fail "apt-get install --reinstall (a conffile prompt also fails here)"
+apt_run install --reinstall "$SRV" || fail "apt-get install --reinstall"
 check "5: the PSK did not change" test "$(auth_key)" = "$PSK"
 check "5: the certificate did not change" test "$(cert_fp)" = "$FP"
-check "19.2: the conffile edit stays" grep -qx 'MQVPN_SUBNET6=' "$DEFAULTS"
-check "19.2: dpkg wrote no .dpkg-dist or .dpkg-old file" bash -c "! ls $DEFAULTS.dpkg-* 2>/dev/null"
 check "5: $UNIT is active after the reinstall" wait_active
 
 # ── 18: mqvpn-dev builds a program against libmqvpn ──────────────────────────
@@ -186,22 +181,21 @@ apt_run remove mqvpn-dev || fail "apt-get remove mqvpn-dev"
 check "18: libmqvpn.so.4 stays after the removal of mqvpn-dev" test -e /usr/lib/libmqvpn.so.4
 check "18: the program still runs" "$WORK/devtest"
 
-# ── 7: remove keeps the configuration; a reinstall starts the server again ──
+# ── 7: remove keeps the configuration; a reinstall leaves the server stopped ─
 
-phase "7, 19.4: apt-get remove mqvpn-server"
+phase "7: apt-get remove mqvpn-server"
 apt_run remove mqvpn-server || fail "apt-get remove mqvpn-server"
 check "7: $UNIT is not active" is_inactive
 check "7: the NAT rule is gone" nat_rule_absent
 check "7: server.conf stays" test -f "$CONF"
 check "7: postrm printed the purge note" log_has "mqvpn-server: removed. A purge deletes the generated server.conf"
-check "19.4: remove keeps $DEFAULTS" test -f "$DEFAULTS"
 apt_run install "$SRV" || fail "apt-get install after remove"
 check "7: a reinstall leaves the stopped server stopped" is_inactive
 check "7: the reinstall keeps the PSK" test "$(auth_key)" = "$PSK"
 
-# ── 8, 13, 19.4: purge deletes the generated files only ──────────────────────
+# ── 8, 13: purge deletes the generated files only ───────────────────────────
 
-phase "8, 13, 19.4: apt-get purge mqvpn-server"
+phase "8, 13: apt-get purge mqvpn-server"
 apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
 for f in "$CONF" "$CRT" "$KEY"; do
     check "13: purge deleted $f" test ! -e "$f"
@@ -209,7 +203,6 @@ done
 check "8: purge deleted /var/lib/mqvpn-server" test ! -e /var/lib/mqvpn-server
 check "8: purge listed the deleted server.conf once" test "$(grep -cxF "mqvpn-server: deleted $CONF" "$LOG")" = 1
 check "8: /etc/mqvpn/client.conf.example of mqvpn stays" test -f /etc/mqvpn/client.conf.example
-check "19.4: purge deleted $DEFAULTS" test ! -e "$DEFAULTS"
 check "8: purge deleted the debconf answers" debconf_purged
 
 # ── 13b: purge keeps a symlink that replaced a generated certificate ────────
@@ -258,8 +251,9 @@ check "6b: postinst reported the failed setup" log_has "mqvpn-server: setup fail
 check "6b: $UNIT is not active" is_inactive
 check "6b: $UNIT is not enabled" bash -c "[ \"\$(systemctl is-enabled $UNIT 2>/dev/null)\" != enabled ]"
 check "6b: no server.conf" test ! -e "$CONF"
-timeout 300 dpkg-reconfigure -f noninteractive mqvpn-server </dev/null > "$LOG" 2>&1 || fail "dpkg-reconfigure after a failed setup"
+timeout 300 env MQVPN_SUBNET=10.77.0.0/24 dpkg-reconfigure -f noninteractive mqvpn-server </dev/null > "$LOG" 2>&1 || fail "dpkg-reconfigure after a failed setup"
 check "6b: the recovery uses the debconf port" conf_has "Listen = 0.0.0.0:10443"
+check "6b: the recovery uses the environment" conf_has "Subnet = 10.77.0.0/24"
 systemctl enable --now "$UNIT" >/dev/null 2>&1 || fail "systemctl enable --now after the recovery"
 check "6b: $UNIT is enabled after the recovery" is_enabled
 check "6b: $UNIT runs after the recovery" wait_active
@@ -322,23 +316,6 @@ check "14: server.conf survives purge unchanged" test "$(sha256sum "$CONF")" = "
 check "14: the certificate symlink survives purge" test -L "$CRT"
 check "14: the key symlink survives purge" test -L "$KEY"
 rm -f "$CONF" "$CRT" "$KEY"
-
-# ── 19.3: conffile upgrade with --force-confdef --force-confold ──────────────
-
-phase "19.3: upgrade to a server deb with a changed conffile"
-apt_run MQVPN_PORT=10443 install "$SRV" || fail "apt-get install mqvpn-server"
-sed -i 's/^#MQVPN_PORT=443$/MQVPN_PORT=10443/' "$DEFAULTS"
-dpkg-deb -R "$SRV" "$WORK/srv2"
-sed -i "s/^Version: .*/Version: $VERSION+ci1/" "$WORK/srv2/DEBIAN/control"
-echo "# packaged change for the conffile test" >> "$WORK/srv2/etc/default/mqvpn-server"
-(cd "$WORK/srv2" && find . -type f ! -path './DEBIAN/*' -printf '%P\0' | xargs -0 md5sum > DEBIAN/md5sums)
-dpkg-deb --root-owner-group -b "$WORK/srv2" "$WORK/srv2.deb" >/dev/null
-apt_run -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install "$WORK/srv2.deb" \
-    || fail "upgrade with --force-confdef --force-confold"
-check "19.3: the admin edit stays" grep -qx 'MQVPN_PORT=10443' "$DEFAULTS"
-check "19.3: dpkg wrote the package version as .dpkg-dist" grep -q 'packaged change for the conffile test' "$DEFAULTS.dpkg-dist"
-apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
-check "19.3: purge deleted $DEFAULTS" test ! -e "$DEFAULTS"
 
 # ── 17: upgrade from the last pre-split mqvpn deb ────────────────────────────
 

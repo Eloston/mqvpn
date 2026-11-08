@@ -76,7 +76,7 @@ SERVER_FILES=(/usr/lib/systemd/system/mqvpn-server.service /usr/lib/mqvpn/mqvpn-
               /usr/lib/mqvpn/mqvpn-nat-config /etc/mqvpn/server.conf.example /etc/mqvpn/server.json.example)
 DEV_FILES=(/usr/include/libmqvpn.h /usr/include/mqvpn_bind_posix.h /usr/lib/libmqvpn.so)
 expect_in srv mqvpn-server "${SERVER_FILES[@]}" /usr/lib/mqvpn/mqvpn-server-setup /usr/bin/mqvpn-server-info \
-    /etc/default/mqvpn-server /usr/share/doc/mqvpn-server/README.Debian \
+    /usr/share/doc/mqvpn-server/README.Debian \
     /usr/share/doc/mqvpn-server/LICENSE /usr/share/doc/mqvpn-server/NOTICE
 expect_not_in rt mqvpn "${SERVER_FILES[@]}" "${DEV_FILES[@]}"
 expect_in dev mqvpn-dev "${DEV_FILES[@]}" /usr/share/doc/mqvpn-dev/LICENSE /usr/share/doc/mqvpn-dev/NOTICE
@@ -111,14 +111,9 @@ else
     fail "version $VERSION is below the split version $split: the new debs break the mqvpn deb of the same build"
 fi
 
-# ── conffiles (D5, R14) ─────────────────────────────────────────────────────
+# ── conffiles: none, so that no upgrade can stop at a dpkg prompt ───────────
 conffiles() { dpkg-deb --ctrl-tarfile "$1" | tar -xO ./conffiles 2>/dev/null || true; }
-if [ "$(conffiles "$SRV")" = /etc/default/mqvpn-server ]; then
-    pass "mqvpn-server conffiles lists only /etc/default/mqvpn-server"
-else
-    fail "mqvpn-server conffiles is: $(conffiles "$SRV")"
-fi
-for deb in "$RT" "$DEV"; do
+for deb in "$RT" "$SRV" "$DEV"; do
     if [ -z "$(conffiles "$deb")" ]; then pass "${deb##*/} has no conffiles"; else fail "${deb##*/} has conffiles"; fi
 done
 

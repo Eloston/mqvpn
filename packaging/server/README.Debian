@@ -47,9 +47,8 @@ from the "sudo VAR=value command" form, so use "sudo env":
 The variables are MQVPN_PORT, MQVPN_SUBNET, MQVPN_SUBNET6 and
 MQVPN_SERVER_AUTOSTART.
 
-Precedence, lowest first: built-in defaults, debconf answers,
-/etc/default/mqvpn-server, environment variables, mqvpn-server-setup
-options.
+Precedence, lowest first: built-in defaults, debconf answers, environment
+variables, mqvpn-server-setup options.
 
 To use a specific PSK, write /etc/mqvpn/server.conf before the install. The
 package never puts the PSK in debconf.
@@ -64,34 +63,17 @@ Settings after the install
 To enable the local control API, uncomment the [Control] section of
 server.conf. The control API has no authentication and no TLS.
 
-Debconf answers and /etc/default/mqvpn-server apply only when
-mqvpn-server-setup creates a new server.conf. "dpkg-reconfigure
-mqvpn-server" changes the debconf answers, but it does not change an
-existing server.conf, and it does not restart the server. To create a new
+Debconf answers apply only when mqvpn-server-setup creates a new
+server.conf. "dpkg-reconfigure mqvpn-server" changes the debconf answers,
+but it does not change an existing server.conf, and it does not restart the
+server. To create a new
 server.conf from new answers, delete /etc/mqvpn/server.conf (this also
 deletes the PSK, so each client needs the new key) and run:
 
     sudo dpkg-reconfigure mqvpn-server
 
-mqvpn-server-setup alone does not read the debconf answers. It uses
-/etc/default/mqvpn-server, the environment and its options.
-
-/etc/default/mqvpn-server and unattended upgrades
--------------------------------------------------
-
-/etc/default/mqvpn-server is a dpkg conffile. All its settings are comments.
-If you change it, and a later package version also changes it, dpkg asks
-which version to keep. Without a terminal, that question makes the upgrade
-fail. Automation must give dpkg a default answer:
-
-    sudo apt-get -o Dpkg::Options::=--force-confdef \
-        -o Dpkg::Options::=--force-confold install ./mqvpn-server_<version>_<arch>.deb
-
-With these options, dpkg keeps your file and writes the package version as
-/etc/default/mqvpn-server.dpkg-dist.
-
-If you create /etc/default/mqvpn-server before the first install, dpkg also
-asks. Use debconf or environment variables before the first install.
+mqvpn-server-setup alone does not read the debconf answers. It uses the
+environment and its options.
 
 Remove and purge
 ----------------

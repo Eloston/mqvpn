@@ -1406,9 +1406,6 @@ install(PROGRAMS scripts/mqvpn-server-setup.sh
         DESTINATION lib/mqvpn RENAME mqvpn-server-setup COMPONENT server)
 install(PROGRAMS scripts/mqvpn-server-info.sh
         DESTINATION bin RENAME mqvpn-server-info COMPONENT server)
-# A dpkg conffile: packaging/server/conffiles must list this path.
-install(FILES packaging/server/mqvpn-server.default
-    DESTINATION /etc/default RENAME mqvpn-server COMPONENT server)
 
 # Bundle the project license and NOTICE in /usr/share/doc/<package>/ inside
 # each generated deb (and any tarball that runs `cmake --install`). Required by
@@ -1482,7 +1479,7 @@ if(DPKG_CMD)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "mp0rta")
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/mp0rta/mqvpn")
     set(CPACK_DEBIAN_PACKAGE_SECTION "net")
-    # Policy modes: 0755 for maintainer scripts, 0644 for templates and conffiles.
+    # Policy modes: 0755 for maintainer scripts, 0644 for templates.
     set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION TRUE)
 
     set(CPACK_DEB_COMPONENT_INSTALL ON)
@@ -1511,7 +1508,7 @@ if(DPKG_CMD)
     set(CPACK_DEBIAN_SERVER_DESCRIPTION
         "Multipath QUIC VPN server (systemd unit, NAT helper, TLS/PSK bootstrap)")
     set(CPACK_DEBIAN_SERVER_PACKAGE_CONTROL_EXTRA
-        "${CMAKE_SOURCE_DIR}/packaging/server/postinst;${CMAKE_SOURCE_DIR}/packaging/server/prerm;${CMAKE_SOURCE_DIR}/packaging/server/postrm;${CMAKE_SOURCE_DIR}/packaging/server/templates;${CMAKE_SOURCE_DIR}/packaging/server/config;${CMAKE_SOURCE_DIR}/packaging/server/conffiles")
+        "${CMAKE_SOURCE_DIR}/packaging/server/postinst;${CMAKE_SOURCE_DIR}/packaging/server/prerm;${CMAKE_SOURCE_DIR}/packaging/server/postrm;${CMAKE_SOURCE_DIR}/packaging/server/templates;${CMAKE_SOURCE_DIR}/packaging/server/config")
 
     set(CPACK_DEBIAN_DEV_PACKAGE_NAME "mqvpn-dev")
     set(CPACK_DEBIAN_DEV_FILE_NAME "mqvpn-dev_${PROJECT_VERSION}_${DPKG_ARCH}.deb")
