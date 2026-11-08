@@ -19,9 +19,9 @@ sudo apt install ./mqvpn_VERSION_ARCH.deb ./mqvpn-server_VERSION_ARCH.deb
 
 The install generates a certificate, auth key, and server config, then starts the server and registers it for automatic startup on boot. It keeps a certificate or config that already exists. The generated config turns on hybrid mode and the reorder buffer on the server side; each takes effect only for clients that also turn it on. It also sets `AllowClientScheduler = true`, so a client can ask for its own download scheduler.
 
-The install prints the auth key and a client command. Run `sudo mqvpn-server-info` to show them again.
+The install prints the auth key. Run `sudo mqvpn-server-info` to show it again.
 
-The install asks for an optional public hostname for the certificate. It asks for a client subnet only when the default `10.0.0.0/24` overlaps a network of the server, and for the port only when UDP 443 is already in use. To set values in advance, for example in automation:
+The install asks for a client subnet only when the default `10.0.0.0/24` overlaps a network of the server, and for the port only when UDP 443 is already in use. To set values in advance, for example in automation:
 
 ```bash
 echo 'mqvpn-server mqvpn-server/subnet string 10.8.0.0/24' | sudo debconf-set-selections
@@ -61,7 +61,7 @@ curl -fsSL https://github.com/mp0rta/mqvpn/releases/latest/download/install.sh \
 To uninstall, re-run the script with `--uninstall` (add `--purge` to also remove config files).
 
 ::: warning
-Both install methods generate a self-signed certificate when the server has none. With that certificate, clients must use `--insecure` to connect. For production, replace the certificate with a trusted one (e.g., Let's Encrypt) and omit `--insecure`. The deb keeps a certificate that is already in place, and `sudo mqvpn-server-info` adds `--insecure` to the client command only for a self-signed certificate.
+Both install methods generate a self-signed certificate when the server has none. With that certificate, clients must use `--insecure` to connect. For production, replace the certificate with a trusted one (e.g., Let's Encrypt) and omit `--insecure`. The deb keeps a certificate that is already in place.
 Point `--cert` (or `Cert` / `cert_file` in a config file) at the full chain file (for Let's Encrypt, `fullchain.pem`): clients do not fetch missing intermediates.
 :::
 
@@ -89,7 +89,7 @@ See [Building](./building) for instructions.
 
 ## Quick Start
 
-After installing the server and client, connect using the auth key and address that the server install showed. On a deb install, `sudo mqvpn-server-info` shows them again. The commands below use `--insecure` for a self-signed certificate; omit it if the server has a trusted certificate.
+After installing the server and client, connect using your server's address and the auth key that the server install showed. On a deb install, `sudo mqvpn-server-info` shows the key again. The commands below use `--insecure` for a self-signed certificate; omit it if the server has a trusted certificate.
 
 Single path:
 

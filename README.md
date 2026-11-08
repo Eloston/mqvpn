@@ -136,13 +136,13 @@ sudo apt install ./mqvpn_VERSION_ARCH.deb ./mqvpn-server_VERSION_ARCH.deb
 
 The install generates a self-signed TLS certificate, an auth key, and the server config at `/etc/mqvpn/server.conf`, then starts the server and registers it for automatic startup on boot. It keeps a certificate or config that already exists. The generated config turns on hybrid mode and the reorder buffer on the server side; each takes effect only for clients that also turn it on. It also sets `AllowClientScheduler = true`, so a client can ask for its own download scheduler.
 
-The install prints the auth key and a client command. To show them again:
+The install prints the auth key. To show it again:
 
 ```bash
 sudo mqvpn-server-info
 ```
 
-The install asks for an optional public hostname for the certificate. It asks for a client subnet only when the default `10.0.0.0/24` overlaps a network of the server, and for the port only when UDP 443 is already in use. To set values in advance, for example in automation:
+The install asks for a client subnet only when the default `10.0.0.0/24` overlaps a network of the server, and for the port only when UDP 443 is already in use. To set values in advance, for example in automation:
 
 ```bash
 echo 'mqvpn-server mqvpn-server/subnet string 10.8.0.0/24' | sudo debconf-set-selections
@@ -519,14 +519,6 @@ Control API: see [docs/control-api.md](docs/control-api.md) for the full wire-pr
 ### Enable
 
 The control API is **disabled by default**. Enable it via any of the following:
-
-#### From the `mqvpn-server` deb
-
-```bash
-sudo /usr/lib/mqvpn/mqvpn-server-setup --enable-control        # port 9090
-sudo /usr/lib/mqvpn/mqvpn-server-setup --enable-control 9091
-sudo systemctl restart mqvpn-server
-```
 
 #### From `install.sh`
 

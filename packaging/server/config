@@ -3,7 +3,7 @@
 # Copyright (c) 2026 mp0rta and mqvpn contributors
 #
 # debconf config script for mqvpn-server. At the default priority it asks for
-# the hostname, and for the subnet or the port only when the default collides.
+# the subnet or the port only when the default collides.
 
 set -e
 
@@ -69,15 +69,8 @@ if [ -r "$CONF" ]; then
     # dpkg-reconfigure does not show stale values.
     listen=$(conf_value Interface Listen)
     subnet=$(conf_value Interface Subnet)
-    control=$(conf_value Control Listen)
     [ -n "${listen##*:}" ] && db_set mqvpn-server/port "${listen##*:}"
     [ -n "$subnet" ] && db_set mqvpn-server/subnet "$subnet"
-    if [ -n "$control" ]; then
-        db_set mqvpn-server/enable_control true
-        db_set mqvpn-server/control_port "${control##*:}"
-    else
-        db_set mqvpn-server/enable_control false
-    fi
     # An existing config ignores the answers, so ask only on dpkg-reconfigure.
     [ "$1" = reconfigure ] || exit 0
 fi
@@ -95,8 +88,6 @@ if [ "$RET" != true ]; then
 fi
 db_input "$subnet_priority" mqvpn-server/subnet || true
 
-db_input high mqvpn-server/hostname || true
-
 port_priority=medium
 db_get mqvpn-server/port
 if command -v ss >/dev/null 2>&1 && [ -n "$(ss -Hlun "sport = :$RET" 2>/dev/null)" ]; then
@@ -104,11 +95,6 @@ if command -v ss >/dev/null 2>&1 && [ -n "$(ss -Hlun "sport = :$RET" 2>/dev/null
 fi
 db_input "$port_priority" mqvpn-server/port || true
 
-db_input low mqvpn-server/enable_control || true
-db_get mqvpn-server/enable_control
-if [ "$RET" = true ]; then
-    db_input low mqvpn-server/control_port || true
-fi
 db_input low mqvpn-server/autostart || true
 
 db_go || true

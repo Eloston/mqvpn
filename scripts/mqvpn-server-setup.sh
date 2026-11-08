@@ -7,11 +7,9 @@
 # admins can run it again at any time.
 #
 # Usage:
-#   mqvpn-server-setup [--port N] [--subnet CIDR] [--subnet6 CIDR6]
-#                      [--hostname NAME] [--enable-control [PORT]] [--start]
+#   mqvpn-server-setup [--port N] [--subnet CIDR] [--subnet6 CIDR6] [--start]
 #
-# It never replaces an existing PSK, certificate, key or server.conf. On an
-# existing server.conf, only --enable-control makes a change.
+# It never replaces an existing PSK, certificate, key or server.conf.
 
 set -euo pipefail
 
@@ -34,7 +32,7 @@ warn() { echo "[!] $*" >&2; }
 err()  { echo "[!] $*" >&2; exit 1; }
 
 usage() {
-    echo "Usage: mqvpn-server-setup [--port N] [--subnet CIDR] [--subnet6 CIDR6] [--hostname NAME] [--enable-control [PORT]] [--start]"
+    echo "Usage: mqvpn-server-setup [--port N] [--subnet CIDR] [--subnet6 CIDR6] [--start]"
 }
 
 is_true() {
@@ -45,8 +43,7 @@ is_true() {
 }
 
 # --- Settings (precedence, lowest first: defaults, debconf, $DEFAULTS_FILE, environment, flags) ---
-SETTINGS=(MQVPN_PORT MQVPN_SUBNET MQVPN_SUBNET6 MQVPN_HOSTNAME
-          MQVPN_ENABLE_CONTROL MQVPN_CONTROL_PORT MQVPN_SERVER_AUTOSTART)
+SETTINGS=(MQVPN_PORT MQVPN_SUBNET MQVPN_SUBNET6 MQVPN_SERVER_AUTOSTART)
 
 # Save the environment values first: sourcing $DEFAULTS_FILE overwrites them.
 declare -A env_values=()
@@ -66,16 +63,6 @@ while [ $# -gt 0 ]; do
         --port)     require_arg "$#" --port;     flag_values[MQVPN_PORT]=$2;     shift 2 ;;
         --subnet)   require_arg "$#" --subnet;   flag_values[MQVPN_SUBNET]=$2;   shift 2 ;;
         --subnet6)  require_arg "$#" --subnet6;  flag_values[MQVPN_SUBNET6]=$2;  shift 2 ;;
-        --hostname) require_arg "$#" --hostname; flag_values[MQVPN_HOSTNAME]=$2; shift 2 ;;
-        --enable-control)
-            flag_values[MQVPN_ENABLE_CONTROL]=yes
-            if [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]]; then
-                flag_values[MQVPN_CONTROL_PORT]=$2
-                shift 2
-            else
-                shift
-            fi
-            ;;
         --start) START=1; shift ;;
         --from-postinst) FROM_POSTINST=1; shift ;;
         --print-autostart) PRINT_AUTOSTART=1; shift ;;
@@ -87,9 +74,6 @@ done
 MQVPN_PORT=443
 MQVPN_SUBNET=10.0.0.0/24
 MQVPN_SUBNET6=
-MQVPN_HOSTNAME=
-MQVPN_ENABLE_CONTROL=no
-MQVPN_CONTROL_PORT=9090
 MQVPN_SERVER_AUTOSTART=yes
 
 # postinst passes the debconf answers as MQVPN_DEBCONF_<NAME>.
@@ -115,8 +99,8 @@ if [ "$PRINT_AUTOSTART" -eq 1 ]; then
     exit 0
 fi
 
-# The values go into server.conf and the openssl subject, so reject anything
-# that is not plainly a port, a CIDR or a host name.
+# The values go into server.conf, so reject anything that is not plainly a
+# port or a CIDR.
 valid_port() { [[ "$1" =~ ^[0-9]{1,5}$ ]] && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]; }
 # Prefix ranges: the address pool accepts only these (src/addr_pool.c).
 valid_subnet4() {
@@ -147,12 +131,9 @@ valid_subnet6() {
     (( n <= 7 ))
 }
 valid_port "$MQVPN_PORT" || err "Invalid port: $MQVPN_PORT"
-valid_port "$MQVPN_CONTROL_PORT" || err "Invalid control port: $MQVPN_CONTROL_PORT"
 valid_subnet4 "$MQVPN_SUBNET" || err "Invalid subnet (an IPv4 CIDR from /16 to /30): $MQVPN_SUBNET"
 [ -z "$MQVPN_SUBNET6" ] || valid_subnet6 "$MQVPN_SUBNET6" \
     || err "Invalid subnet6 (an IPv6 CIDR from /96 to /126): $MQVPN_SUBNET6"
-[ -z "$MQVPN_HOSTNAME" ] || [[ "$MQVPN_HOSTNAME" =~ ^[A-Za-z0-9.:-]{1,253}$ ]] \
-    || err "Invalid hostname: $MQVPN_HOSTNAME"
 
 [ "$(id -u)" -eq 0 ] || err "mqvpn-server-setup must run as root (use sudo)"
 [ -x "$MQVPN" ] || err "$MQVPN not found (install the mqvpn package)"
@@ -182,11 +163,8 @@ record_generated() {
     touch "$GENERATED_LIST"
     grep -qxF "$1" "$GENERATED_LIST" || echo "$1" >> "$GENERATED_LIST"
 }
-# The hash and not the path: an admin can put an own file at a listed path.
+# purge deletes the certificate and key only on a hash match: an admin can copy an own file to a listed path.
 record_hash() { mkdir -p "$STATE_DIR"; echo "$(sha256sum < "$1" | cut -d' ' -f1)  $2" >> "$GENERATED_HASHES"; }
-is_generated_file() {
-    [ -f "$GENERATED_HASHES" ] && grep -qxF "$(sha256sum < "$1" | cut -d' ' -f1)  $1" "$GENERATED_HASHES"
-}
 
 umask 077
 mkdir -p "$CONF_DIR"
@@ -199,36 +177,18 @@ mkdir -p "$CONF_DIR"
 crt_exists=0; key_exists=0
 if [ -e "$CRT" ] || [ -L "$CRT" ]; then crt_exists=1; fi
 if [ -e "$KEY" ] || [ -L "$KEY" ]; then key_exists=1; fi
-# One file of a pair that this script generated is left from an interrupted run.
-if [ "$crt_exists" -ne "$key_exists" ]; then
-    present=$CRT
-    [ "$key_exists" -eq 1 ] && present=$KEY
-    if [ ! -L "$present" ] && is_generated_file "$present"; then
-        warn "$present is left from an interrupted run; creating the certificate again"
-        rm -f "$present"
-        crt_exists=0; key_exists=0
-    fi
-fi
 if [ "$crt_exists" -eq 1 ] && [ "$key_exists" -eq 1 ]; then
     ok "Certificate already in place, skipping (managed by admin / certbot / etc.)"
 elif [ "$crt_exists" -eq 0 ] && [ "$key_exists" -eq 0 ]; then
-    san_args=()
-    if [ -n "$MQVPN_HOSTNAME" ]; then
-        if [[ "$MQVPN_HOSTNAME" =~ ^[0-9.]+$ || "$MQVPN_HOSTNAME" == *:* ]]; then
-            san_args=(-addext "subjectAltName=IP:$MQVPN_HOSTNAME")
-        else
-            san_args=(-addext "subjectAltName=DNS:$MQVPN_HOSTNAME")
-        fi
-    fi
     tmp_key=$(mktemp "$CONF_DIR/.server.key.XXXXXX")
     tmp_crt=$(mktemp "$CONF_DIR/.server.crt.XXXXXX")
     trap 'rm -f "$tmp_key" "$tmp_crt"' EXIT
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
         -keyout "$tmp_key" -out "$tmp_crt" -days 365 -nodes \
-        -subj "/CN=${MQVPN_HOSTNAME:-mqvpn}" "${san_args[@]}" 2>/dev/null \
+        -subj "/CN=mqvpn" 2>/dev/null \
         || err "Failed to generate the self-signed certificate"
     chmod 600 "$tmp_key" "$tmp_crt"
-    # List the paths before the files appear, so that an interrupted run is recoverable.
+    # List the paths before the files appear, so that purge finds them after an interrupted run.
     record_generated "$CRT"
     record_generated "$KEY"
     record_hash "$tmp_crt" "$CRT"
@@ -241,7 +201,7 @@ elif [ "$crt_exists" -eq 0 ] && [ "$key_exists" -eq 0 ]; then
     fi
     rm -f "$tmp_key" "$tmp_crt"
     trap - EXIT
-    ok "Generated self-signed certificate (CN=${MQVPN_HOSTNAME:-mqvpn})"
+    ok "Generated self-signed certificate (CN=mqvpn)"
 else
     missing=$([ "$crt_exists" -eq 0 ] && echo server.crt || echo server.key)
     warn "Only one of $CONF_DIR/server.{crt,key} is present ($missing missing); leaving as-is. Place the missing file before starting mqvpn-server."
@@ -293,13 +253,8 @@ if [ ! -f "$CONF" ]; then
         echo "[Reorder]"
         echo "Enabled = true"
         echo
-        if is_true "$MQVPN_ENABLE_CONTROL"; then
-            echo "[Control]"
-            echo "Listen = 127.0.0.1:$MQVPN_CONTROL_PORT"
-        else
-            echo "# [Control]"
-            echo "# Listen = 127.0.0.1:9090"
-        fi
+        echo "# [Control]"
+        echo "# Listen = 127.0.0.1:9090"
     } > "$tmp"
     chmod 600 "$tmp"
     ln "$tmp" "$CONF" 2>/dev/null || err "$CONF appeared during setup; it was not replaced"
@@ -309,53 +264,6 @@ if [ ! -f "$CONF" ]; then
     ok "Generated $CONF"
 else
     ok "Config already exists, skipping"
-
-    # Only the --enable-control flag changes an existing config, not the
-    # debconf answers or $DEFAULTS_FILE.
-    if [ -n "${flag_values[MQVPN_ENABLE_CONTROL]:-}" ]; then
-        CONTROL_PORT=$MQVPN_CONTROL_PORT
-        if grep -qE '^[[:space:]]*\[Control\][[:space:]]*$' "$CONF"; then
-            warn "[Control] section is already active in $CONF — not modified."
-
-        elif awk -v port="$CONTROL_PORT" '
-            BEGIN { replaced = 0 }
-            {
-                if (!replaced && prev == "# [Control]" \
-                    && $0 == "# Listen = 127.0.0.1:9090") {
-                    print "[Control]"
-                    print "Listen = 127.0.0.1:" port
-                    replaced = 1
-                    prev = ""
-                    next
-                }
-                if (NR > 1) print prev
-                prev = $0
-            }
-            END {
-                if (prev != "") print prev
-                exit (replaced ? 0 : 1)
-            }
-        ' "$CONF" > "$CONF.new"; then
-            chmod --reference="$CONF" "$CONF.new"
-            chown --reference="$CONF" "$CONF.new"
-            mv "$CONF.new" "$CONF"
-            ok "Uncommented [Control] stub in $CONF (port $CONTROL_PORT)."
-
-        else
-            rm -f "$CONF.new"
-            if grep -qE '^[[:space:]]*#[[:space:]]*\[Control\]' "$CONF"; then
-                warn "Found admin-edited commented [Control] in $CONF — not modified."
-                warn "Edit it manually: uncomment '[Control]' and 'Listen = ...'."
-            else
-                {
-                    echo
-                    echo "[Control]"
-                    echo "Listen = 127.0.0.1:$CONTROL_PORT"
-                } >> "$CONF"
-                ok "Appended [Control] block to $CONF."
-            fi
-        fi
-    fi
 fi
 
 # postinst runs daemon-reload, the start and the summary itself.

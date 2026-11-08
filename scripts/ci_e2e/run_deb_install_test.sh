@@ -277,18 +277,14 @@ apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
 
 # ── 11: debconf preseed ──────────────────────────────────────────────────────
 
-phase "11: preseed the subnet and the hostname"
+phase "11: preseed the subnet and the port"
 debconf-set-selections <<'EOF'
 mqvpn-server mqvpn-server/subnet string 10.88.0.0/24
-mqvpn-server mqvpn-server/hostname string vpn.ci.example
 mqvpn-server mqvpn-server/port string 10443
 EOF
 apt_run install "$SRV" || fail "apt-get install with preseeded answers"
 check "11: server.conf uses the preseeded subnet" conf_has "Subnet = 10.88.0.0/24"
 check "11: server.conf uses the preseeded port" conf_has "Listen = 0.0.0.0:10443"
-check "11: the certificate CN is the hostname" bash -c "openssl x509 -in $CRT -noout -subject | grep -q 'CN *= *vpn.ci.example'"
-check "11: the certificate SAN is the hostname" bash -c "openssl x509 -in $CRT -noout -ext subjectAltName | grep -q 'DNS:vpn.ci.example'"
-check "11: the client command uses the hostname" bash -c "mqvpn-server-info | grep -q -- '--server vpn.ci.example:10443'"
 apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
 
 # ── 12: subnet collision detection ───────────────────────────────────────────
@@ -377,10 +373,7 @@ apt_run MQVPN_PORT=10443 install "$RT" "$SRV" "$DEV" || fail "17.5: one-transact
 check "17.5: dpkg reported no file conflict" bash -c "! grep -q 'trying to overwrite' $LOG"
 check "17.5: mqvpn-dev owns libmqvpn.h" bash -c "dpkg -S /usr/include/libmqvpn.h | grep -q '^mqvpn-dev:'"
 check "17.5: libmqvpn.a is gone" test ! -e /usr/lib/libmqvpn.a
-check "17.5: the unit that was disabled in the old deb stays disabled" bash -c "[ \"\$(systemctl is-enabled $UNIT 2>/dev/null)\" != enabled ]"
-check "17.5: the unit that was disabled in the old deb does not start" is_inactive
-check "17.5: postinst said why the unit stays disabled" log_has "was disabled before this install, so it stays disabled"
-check "17.5: postinst deleted the keep-disabled marker" test ! -e /var/lib/mqvpn-server/keep-disabled
+check "17.5: the first install of mqvpn-server starts the server" wait_active
 purge_all
 rm -f "$CONF" "$CRT" "$KEY"
 

@@ -22,15 +22,5 @@
 # works on this host.
 #MQVPN_SUBNET6=
 
-# Public hostname or IP address. The self-signed certificate and the printed
-# client command use it. Empty: the certificate name "mqvpn" and the detected
-# public IP address.
-#MQVPN_HOSTNAME=
-
-# Local control API on 127.0.0.1 (yes or no). It has no authentication and no
-# TLS.
-#MQVPN_ENABLE_CONTROL=no
-#MQVPN_CONTROL_PORT=9090
-
 # Enable and start mqvpn-server.service on the first install (yes or no).
 #MQVPN_SERVER_AUTOSTART=yes

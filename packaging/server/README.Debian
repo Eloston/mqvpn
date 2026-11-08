@@ -27,17 +27,16 @@ The summary contains the PSK. apt also writes it to /var/log/apt/term.log
 Settings before the install
 ---------------------------
 
-debconf asks for the public hostname. It asks for the client subnet only
-when the default 10.0.0.0/24 overlaps a network of this host, and for the
-UDP port only when port 443 is already in use. The other settings take their
-defaults. For automation, preseed debconf:
+debconf asks for the client subnet only when the default 10.0.0.0/24
+overlaps a network of this host, and for the UDP port only when port 443 is
+already in use. The other settings take their defaults. For automation,
+preseed debconf:
 
     echo 'mqvpn-server mqvpn-server/subnet string 10.8.0.0/24' | sudo debconf-set-selections
-    echo 'mqvpn-server mqvpn-server/hostname string vpn.example.org' | sudo debconf-set-selections
     sudo apt install ./mqvpn_<version>_<arch>.deb ./mqvpn-server_<version>_<arch>.deb
 
-The other debconf keys are mqvpn-server/port, mqvpn-server/enable_control
-(boolean), mqvpn-server/control_port and mqvpn-server/autostart (boolean).
+The other debconf keys are mqvpn-server/port and mqvpn-server/autostart
+(boolean).
 
 Environment variables also work. Default sudoers settings drop variables
 from the "sudo VAR=value command" form, so use "sudo env":
@@ -45,8 +44,8 @@ from the "sudo VAR=value command" form, so use "sudo env":
     sudo env MQVPN_PORT=10020 MQVPN_SERVER_AUTOSTART=no apt-get install -y \
         ./mqvpn_<version>_<arch>.deb ./mqvpn-server_<version>_<arch>.deb
 
-The variables are MQVPN_PORT, MQVPN_SUBNET, MQVPN_SUBNET6, MQVPN_HOSTNAME,
-MQVPN_ENABLE_CONTROL, MQVPN_CONTROL_PORT and MQVPN_SERVER_AUTOSTART.
+The variables are MQVPN_PORT, MQVPN_SUBNET, MQVPN_SUBNET6 and
+MQVPN_SERVER_AUTOSTART.
 
 Precedence, lowest first: built-in defaults, debconf answers,
 /etc/default/mqvpn-server, environment variables, mqvpn-server-setup
@@ -62,11 +61,8 @@ Settings after the install
 
     sudo systemctl restart mqvpn-server
 
-To enable the local control API in an existing server.conf, run:
-
-    sudo /usr/lib/mqvpn/mqvpn-server-setup --enable-control [PORT]
-
-The control API has no authentication and no TLS.
+To enable the local control API, uncomment the [Control] section of
+server.conf. The control API has no authentication and no TLS.
 
 Debconf answers and /etc/default/mqvpn-server apply only when
 mqvpn-server-setup creates a new server.conf. "dpkg-reconfigure
@@ -101,8 +97,7 @@ Remove and purge
 ----------------
 
 "apt remove mqvpn-server" stops the server, reverts the NAT rules and the IP
-forwarding sysctls, and keeps all files in /etc/mqvpn. If the server was
-enabled and running, a later reinstall starts it again.
+forwarding sysctls, and keeps all files in /etc/mqvpn.
 
 "apt purge mqvpn-server" also deletes the files that mqvpn-server-setup
 created: server.conf, which contains the PSK, and the self-signed certificate
