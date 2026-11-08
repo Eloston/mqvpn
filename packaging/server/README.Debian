@@ -15,9 +15,9 @@ On the first install, the package runs /usr/lib/mqvpn/mqvpn-server-setup:
 
 Then the package enables and starts mqvpn-server.service and prints the
 connection summary. If the setup fails, the package does not enable or start
-the service: fix the error, then run
-"sudo /usr/lib/mqvpn/mqvpn-server-setup --start". To print the summary again,
-run:
+the service: fix the error, then run "sudo dpkg-reconfigure mqvpn-server",
+which uses your debconf answers, and "sudo systemctl enable --now
+mqvpn-server". To print the summary again, run:
 
     sudo mqvpn-server-info
 

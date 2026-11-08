@@ -237,6 +237,7 @@ check "13c: the copied certificate stays" cmp -s "$CERT_DIR/cert.pem" "$CRT"
 check "13c: the copied key stays" cmp -s "$CERT_DIR/key.pem" "$KEY"
 check "13c: purge reported the kept key" log_has "mqvpn-server: kept $KEY (not the generated file)"
 check "13c: the generated server.conf is gone" test ! -e "$CONF"
+check "13c: purge deleted /var/lib/mqvpn-server" test ! -e /var/lib/mqvpn-server
 rm -f "$CRT" "$KEY"
 
 # ── 6: MQVPN_SERVER_AUTOSTART=no ─────────────────────────────────────────────
@@ -250,12 +251,18 @@ apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
 
 # ── 6b: setup fails on a first install ───────────────────────────────────────
 
-phase "6b: install with an invalid MQVPN_SUBNET"
-apt_run MQVPN_SUBNET=10.77.0.0/8 MQVPN_PORT=10443 install "$SRV" || fail "postinst failed after a failed setup"
+phase "6b: install with an invalid MQVPN_SUBNET, then recover"
+echo "mqvpn-server mqvpn-server/port string 10443" | debconf-set-selections
+apt_run MQVPN_SUBNET=10.77.0.0/8 install "$SRV" || fail "postinst failed after a failed setup"
 check "6b: postinst reported the failed setup" log_has "mqvpn-server: setup failed"
 check "6b: $UNIT is not active" is_inactive
 check "6b: $UNIT is not enabled" bash -c "[ \"\$(systemctl is-enabled $UNIT 2>/dev/null)\" != enabled ]"
 check "6b: no server.conf" test ! -e "$CONF"
+timeout 300 dpkg-reconfigure -f noninteractive mqvpn-server </dev/null > "$LOG" 2>&1 || fail "dpkg-reconfigure after a failed setup"
+check "6b: the recovery uses the debconf port" conf_has "Listen = 0.0.0.0:10443"
+systemctl enable --now "$UNIT" >/dev/null 2>&1 || fail "systemctl enable --now after the recovery"
+check "6b: $UNIT is enabled after the recovery" is_enabled
+check "6b: $UNIT runs after the recovery" wait_active
 apt_run purge mqvpn-server || fail "apt-get purge mqvpn-server"
 
 # ── 10: policy-rc.d refuses the start ────────────────────────────────────────

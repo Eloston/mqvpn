@@ -587,7 +587,16 @@ sudo vi /etc/mqvpn/server.conf
 sudo systemctl restart mqvpn-server
 ```
 
-`mqvpn-server` deb のセットアップが失敗した場合、`server.conf` は作成されず、サーバーも起動しません。インストール時に表示されたエラーを修正してから、`sudo /usr/lib/mqvpn/mqvpn-server-setup --start` を実行してください。
+サーバーが起動時に自動で開始されない場合（インストール時に自動起動をオフにした場合など）は、`sudo systemctl enable mqvpn-server` を実行してください。
+
+`mqvpn-server` deb のセットアップが失敗した場合、`server.conf` は作成されず、サーバーも起動しません。インストール時に表示されたエラーを修正してから、次のコマンドを実行してください：
+
+```bash
+sudo dpkg-reconfigure mqvpn-server
+sudo systemctl enable --now mqvpn-server
+```
+
+`dpkg-reconfigure` はポートなどインストール時の回答を使います。環境変数で指定した設定は保持されないため、先に `/etc/default/mqvpn-server` に記述してください。
 
 `server.conf` がない場合（ソースからビルドした場合など）は、サンプルをコピーします：
 

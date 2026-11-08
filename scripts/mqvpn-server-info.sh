@@ -15,7 +15,7 @@ CONF=/etc/mqvpn/server.conf
 err() { echo "mqvpn-server-info: $*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || err "run as root (use sudo): $CONF is readable only by root"
-[ -f "$CONF" ] || err "$CONF not found. Run: sudo /usr/lib/mqvpn/mqvpn-server-setup"
+[ -f "$CONF" ] || err "$CONF not found. Run: sudo dpkg-reconfigure mqvpn-server"
 
 conf_value() { # $1 = section, $2 = key
     sed -n "/^\\[$1\\]/,/^\\[/ s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\\([^[:space:]#]*\\).*/\\1/p" "$CONF" | head -n 1

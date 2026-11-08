@@ -603,7 +603,16 @@ sudo vi /etc/mqvpn/server.conf
 sudo systemctl restart mqvpn-server
 ```
 
-If the setup of the `mqvpn-server` deb fails, the deb creates no `server.conf` and does not start the server. Fix the error that the install showed, then run `sudo /usr/lib/mqvpn/mqvpn-server-setup --start`.
+If the server does not start at boot (for example, you turned off autostart during the install), run `sudo systemctl enable mqvpn-server`.
+
+If the setup of the `mqvpn-server` deb fails, the deb creates no `server.conf` and does not start the server. Fix the error that the install showed, then run:
+
+```bash
+sudo dpkg-reconfigure mqvpn-server
+sudo systemctl enable --now mqvpn-server
+```
+
+`dpkg-reconfigure` uses the answers from the install, such as the port. It does not keep settings that you gave as environment variables: put those in `/etc/default/mqvpn-server` first.
 
 If there is no `server.conf` (for example, after a source build), copy the example:
 
