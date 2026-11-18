@@ -1573,7 +1573,7 @@ jobs:
           # The Azure mirror is often throttled and stalls apt for 10+ minutes.
           sudo sed -i '/azure.archive.ubuntu.com/d' /etc/apt/apt-mirrors.txt
           sudo apt-get update
-          sudo apt-get install -y cmake libevent-dev golang iptables conntrack clang iperf3 jq netcat-openbsd curl python3
+          sudo apt-get install -y cmake libevent-dev iptables conntrack clang iperf3 jq netcat-openbsd curl python3
 
       - name: Compute xquic SHA
         id: xqsha
